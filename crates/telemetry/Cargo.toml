@@ -1,0 +1,50 @@
+[package]
+name = "intellishell-telemetry"
+version = "0.1.0"
+edition = "2021"
+authors = ["IntelliShell Contributors"]
+license = "MIT"
+description = "Production-grade system telemetry library for IntelliShell"
+rust-version = "1.88"
+
+[dependencies]
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+
+# Safe syscall wrappers (no unsafe in our code)
+nix = { version = "0.29", features = ["fs", "process", "feature"] }
+
+# Lock-free data structures
+parking_lot = "0.12"
+
+# Error handling
+thiserror = "2.0"
+
+[dev-dependencies]
+# Property testing  
+proptest = "1.5"
+
+# Oracle testing (procfs/sysinfo for test comparison only)
+procfs = "0.17"
+sysinfo = "0.33"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+
+[[test]]
+name = "integration"
+path = "tests/integration_test.rs"
+
+[[test]]
+name = "property"
+path = "tests/property_test.rs"
+
+[[test]]
+name = "oracle"
+path = "tests/oracle_test.rs"

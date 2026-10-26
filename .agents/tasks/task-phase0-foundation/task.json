@@ -1,0 +1,16 @@
+{
+  "task_id": "task-phase0-foundation",
+  "task_description": "IntelliShell Phase 0: Foundation and Reproducible Environment — from clone to passing doctor, lint, test, build, and CI on a fresh WSL2 machine",
+  "status": "pending",
+  "feature_order": [
+    "FEAT-001",
+    "FEAT-002",
+    "FEAT-003",
+    "FEAT-004",
+    "FEAT-005",
+    "FEAT-006",
+    "FEAT-007",
+    "FEAT-008"
+  ],
+  "blocked_reason": null
+}

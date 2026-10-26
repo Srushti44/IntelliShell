@@ -1,0 +1,36 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "file": "core-engine/src/server.rs",
+      "function": "execute_command, execute_direct, execute_sandboxed, get_disk_usage, get_network_stats, get_cpu_usage, tests module",
+      "problem": "No test execution evidence. The coder explicitly states 'runtime tests were not executed in this session' due to Rust toolchain version incompatibility (1.87.0 vs 1.88+ required). The 11 unit tests covering history persistence, execution routing, and Linux metrics collection were never run. Without test execution, there is no evidence that database insertions succeed, that history_id propagates correctly, that statvfs returns valid data, that /proc/net/dev parsing handles real interface names, or that CPU delta calculation produces accurate percentages.",
+      "required_fix": "Run `cd core-engine && cargo test -- --test-threads=1` in a WSL environment with Rust 1.88+ installed. Verify all 11 tests pass. If any test fails, fix the underlying issue and re-run until all tests pass. The tests must run under WSL where /proc exists, not under PowerShell where /proc-based code cannot work."
+    },
+    {
+      "file": "ai-service/tests/test_risk.py",
+      "function": "All 30+ test functions",
+      "problem": "No test execution evidence. The coder states Python venv access issues prevented running pytest. The 30+ risk classifier tests covering CRITICAL, HIGH, MEDIUM, LOW, and SAFE patterns were never run. There is no evidence they import correctly, that classify_command returns the expected (RiskLevel, reason) tuple, or that assertions pass.",
+      "required_fix": "Run `cd ai-service && uv run pytest tests/test_risk.py -v` in WSL. Verify all 30+ tests pass. Fix any import errors, API signature mismatches, or assertion failures before declaring the tests complete."
+    },
+    {
+      "file": "core-engine/src/server.rs",
+      "function": "execute_command, db.insert_command, db.update_execution",
+      "problem": "History database wiring is unverified. DEF-001 adds database insert/update calls to record command history, but without test execution there is no evidence that db.insert_command() succeeds, that history_id propagates correctly through execute_direct/execute_sandboxed, or that db.update_execution() persists stdout, stderr, exit_code to the database.",
+      "required_fix": "After running cargo test successfully, perform an integration test: start the server, execute a command via POST to /execute, then query GET /history and verify the entry appears with correct command, status, stdout, and exit_code. Restart the server and verify history persists across restarts."
+    },
+    {
+      "file": "core-engine/src/server.rs",
+      "function": "get_disk_usage, get_network_stats, get_cpu_usage",
+      "problem": "Linux metrics never sampled under actual Linux. DEF-002/003/004 parse /proc files and call statvfs, but without WSL test execution there is no evidence that statvfs returns valid data, that /proc/net/dev parsing handles real interface names (eth0, wlan0, enp0s3), or that CPU delta math produces accurate percentages matching top or mpstat.",
+      "required_fix": "After running cargo test successfully, start the server in WSL and query GET /snapshot. Verify disk_total_bytes > 0, disk_used_percent matches df -h output within ±5%, network_rx_bytes and network_tx_bytes are >= 0, and cpu_percent (on second query after 1s delay) returns a reasonable value between 0-100 that roughly matches top output."
+    },
+    {
+      "file": "core-engine/src/server.rs",
+      "function": "get_cpu_usage",
+      "problem": "CPU delta calculation unconfirmed. DEF-004 refactors get_cpu_usage to calculate 100*(1 - idle_delta/total_delta) using stored previous samples in Arc<Mutex<Option<CpuSample>>>, but the test was never executed to confirm the math works, that the Mutex lock doesn't deadlock, or that first-call-returns-0.0 behavior is correct.",
+      "required_fix": "The cargo test run will verify the unit test test_cpu_usage_delta. Additionally, query /snapshot twice with a 1-second delay and verify the first query returns cpu_percent near 0.0 and the second returns a non-zero value between 0-100."
+    }
+  ],
+  "reviewDoc": "d:/3rd year/os project/IntelliShell/.agents/tasks/review.md"
+}

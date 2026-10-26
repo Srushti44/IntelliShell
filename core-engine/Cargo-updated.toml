@@ -1,0 +1,17 @@
+[package]
+name = "intellishell-core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "intellishell_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "intellishell-core"
+path = "src/main.rs"
+
+[dependencies]
+libc = "0.2"
+nix = { version = "0.29", features = ["signal"] }
+thiserror = "2.0"

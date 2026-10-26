@@ -1,0 +1,24 @@
+{
+  "project_type": "Multi-component Linux system: Rust CLI (core-engine), Python FastAPI service (ai-service), React/Vite dashboard",
+  "language": "Rust (edition 2021), Python 3.13, JavaScript/TypeScript (React)",
+  "build_system": "cargo for Rust, uv for Python (replacing venv), npm for dashboard. No monorepo workspace — three independent components.",
+  "test_framework": "cargo test for Rust, pytest for Python, vitest or similar expected for dashboard (currently no test setup)",
+  "build_command": "make check (runs lint + test + build for all three components)",
+  "test_command": "make test (cargo test && pytest && npm run test in dashboard)",
+  "verification_instructions": "After each feature: run make check to verify all three components build, lint, and test successfully. Run make doctor to verify environment checks pass. Run git status to verify no unintended files are staged.",
+  "snapshot_or_generated_files": "ai-service/uv.lock is generated and must be committed. dashboard/package-lock.json is generated and must be committed. No snapshot files for Rust or Python tests.",
+  "environment_constraints": "CRITICAL: Repo is currently on /mnt/d (9p/drvfs filesystem). R1 FAIL check requires repo under /home, never /mnt/*. This must be documented as a manual prerequisite — the user must clone/move the repo to /home/<user>/ before running doctor. Do NOT attempt automated filesystem moves across mount points. WSL2 kernel is 6.18.33.2 (>= 5.15 OK). All commands run inside WSL Ubuntu. Never use sudo except for apt, systemd, wsl.conf steps (list each in docs/ENVIRONMENT.md). Never chmod 777. No Windows-side config changes. No NVIDIA driver installation inside WSL (rely on Windows driver passthrough).",
+  "contribution_requirements": "Work on branch phase/0-foundation. Tag current HEAD as prototype-v0 before any changes. Use conventional commits. No placeholders, TODO stubs, or empty smoke tests — every file added must be used. Existing code is verified prototype — do not delete or rewrite features. Fix warnings properly (Sandbox.name unused field), not with blanket allow. All listeners bind 127.0.0.1 only. Secrets never enter repo. Push all local commits after fixes.",
+  "key_patterns": "Rust: parse_meminfo_value() in main.rs parses /proc/meminfo lines. read_cpu_ticks() in main.rs parses /proc/<pid>/stat, handling process names with spaces and parentheses by finding last ')' and splitting after. Sandbox struct in cgroup.rs has unused 'name' field — fix with _ prefix or field-level allow. No HTTP server in core-engine — it's a CLI monitor loop. ai-service: currently EMPTY (only empty requirements.txt) — needs full FastAPI implementation with classify_command (pattern-based risk assessment), suggest_safer_alternative, extract_json (handle fenced/unfenced), analyze_impact. dashboard: standard Vite+React 19 template.",
+  "relevant_files": [
+    "core-engine/src/main.rs",
+    "core-engine/src/cgroup.rs",
+    "core-engine/src/namespace.rs",
+    "core-engine/Cargo.toml",
+    "ai-service/requirements.txt",
+    "dashboard/package.json",
+    ".gitignore",
+    ".git/config"
+  ],
+  "directory_structure": "Root: core-engine/ (Rust binary with src/main.rs, cgroup.rs, namespace.rs), ai-service/ (Python, currently only empty requirements.txt), dashboard/ (Vite+React with src/, node_modules/, package.json). Missing: .kiro/, .github/, docs/, scripts/, config/, LICENSE, README.md, .editorconfig, rust-toolchain.toml, .nvmrc, .pre-commit-config.yaml."
+}

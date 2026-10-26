@@ -1,0 +1,34 @@
+{
+  "id": "FEAT-005",
+  "type": "feat",
+  "description": "Doctor script and bootstrap script with environment verification. Create scripts/doctor.sh implementing all R1 FAIL and WARN checks (WSL2, kernel >= 5.15, systemd, cgroup v2, overlayfs, /proc health, repo not on 9p/drvfs, disk space, git identity, toolchain pins, RAM, port conflicts, GPU, non-loopback bindings). Create scripts/bootstrap.sh (idempotent installer for apt packages, rustup, Node via nvm, uv, gh, and ~/.config/intellishell/secret). Create config/default.env with port/path configs. Both scripts must be shellcheck-clean.",
+  "status": "completed",
+  "steps": [
+    "Create config/default.env with: CORE_ENGINE_PORT=3000, AI_SERVICE_PORT=8000, DASHBOARD_PORT=5173, OLLAMA_PORT=11434, OLLAMA_MODEL=phi3:mini, MIN_DISK_GB=5, WARN_DISK_GB=20, MIN_RAM_GB=4",
+    "Create scripts/bootstrap.sh: shebang #!/usr/bin/env bash, set -euo pipefail. Check if running in WSL2. Idempotent installation of: apt packages (build-essential, pkg-config, libssl-dev, curl, git, zstd, shellcheck, jq) via 'sudo apt-get update && sudo apt-get install -y ...', rustup (if ~/.cargo/bin/rustup doesn't exist: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y), nvm + Node 24 (if nvm not in ~/.nvm: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash, then source nvm.sh and nvm install 24), uv (if not in PATH: curl -LsSf https://astral.sh/uv/install.sh | sh), gh (if not installed: follow GitHub CLI install for Ubuntu). Create ~/.config/intellishell/ directory with mode 0700. Generate ~/.config/intellishell/secret if it doesn't exist: openssl rand -hex 32 > ~/.config/intellishell/secret && chmod 0600 ~/.config/intellishell/secret. Echo installed versions at end.",
+    "Create scripts/doctor.sh: shebang #!/usr/bin/env bash, set -euo pipefail. Source config/default.env (with fallback if config/local.env exists). Support --json flag (parse args, set JSON_OUTPUT=true). Initialize FAIL_COUNT=0. Implement check functions: check_wsl2 (grep -qi microsoft /proc/version), check_kernel_version (uname -r >= 5.15 using version comparison), check_systemd (pidof systemd or ps -p 1 -o comm=), check_cgroup_v2 (stat -fc %T /sys/fs/cgroup returns cgroup2fs AND grep -q cpu /sys/fs/cgroup/cgroup.controllers AND memory AND pids), check_overlayfs (grep -q overlay /proc/filesystems), check_proc_health (readlink /proc/self/exe resolves AND test -r /proc/mounts), check_repo_filesystem (repo path from git rev-parse --show-toplevel, stat -f -c %T should NOT be 9p or drvfs), check_disk_space (df -BG . | awk NR==2 {print $4} >= MIN_DISK_GB), check_git_identity (git config user.name && git config user.email), check_toolchains (rustc --version matches rust-toolchain.toml, node --version matches .nvmrc, python3 --version >= 3.13). WARN checks: check_ram (free -g | awk '/^Mem:/ {print $2}' < MIN_RAM_GB), check_disk_warn (free space < WARN_DISK_GB), check_ports (ss -ltn | grep -E ':3000|:8000|:5173|:11434'), check_gpu (nvidia-smi || echo no GPU), check_nonloopback_bindings (ss -ltn | grep -v 127.0.0.1 | grep -E intellishell). Each check prints PASS/WARN/FAIL with remediation. Increment FAIL_COUNT on FAIL. Exit with FAIL_COUNT at end. JSON mode: print JSON array of {check, status, message}.",
+    "Create scripts/doctor-selftest.sh: temporarily override a check (e.g., set MIN_DISK_GB=999999 in environment) and run doctor.sh, assert exit code != 0, assert output contains FAIL and specific check name. Use grep to verify output. Exit 0 if self-test passes, exit 1 if not.",
+    "Make scripts executable: chmod +x scripts/bootstrap.sh scripts/doctor.sh scripts/doctor-selftest.sh",
+    "Run shellcheck on all scripts: shellcheck scripts/*.sh and fix any issues",
+    "Run scripts/doctor-selftest.sh and verify it passes",
+    "Commit: git add config/ scripts/ && git commit -m 'feat(scripts): doctor and bootstrap with full environment checks'"
+  ],
+  "acceptance_criteria": [
+    "config/default.env exists with all required variables",
+    "scripts/bootstrap.sh exists, is executable, and is shellcheck-clean",
+    "scripts/doctor.sh exists, is executable, implements all FAIL and WARN checks, supports --json flag, is shellcheck-clean",
+    "scripts/doctor-selftest.sh exists and passes (exit 0)",
+    "Running scripts/doctor.sh produces PASS/WARN/FAIL output for each check",
+    "Running scripts/doctor.sh exits non-zero if any check fails",
+    "All scripts pass shellcheck with no warnings or errors"
+  ],
+  "verification": [
+    "test -f config/default.env && cat config/default.env",
+    "test -x scripts/bootstrap.sh && test -x scripts/doctor.sh && test -x scripts/doctor-selftest.sh",
+    "shellcheck scripts/*.sh",
+    "bash scripts/doctor-selftest.sh",
+    "bash scripts/doctor.sh --json | jq ."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

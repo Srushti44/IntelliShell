@@ -1,0 +1,8 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    "Uppercase drive letter in WSL example — Line 165 in main.py uses `/mnt/D/` instead of `/mnt/d/`. Change to lowercase: `ls \"/mnt/d/3rd year\"`. This prevents 'No such file or directory' errors on systems with case-sensitive mounts.",
+    "staleTime equals refetchInterval — useSystemSnapshot.js line 11 sets staleTime to 2000ms while refetchInterval is 2000ms. Reduce staleTime to 1000ms so React Query uses cache between polls instead of considering every fetch stale immediately."
+  ],
+  "reviewDoc": "d:\\3rd year\\os project\\IntelliShell\\.agents\\tasks\\bugfix-review.md"
+}

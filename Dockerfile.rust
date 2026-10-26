@@ -1,0 +1,45 @@
+# Rust server Dockerfile
+FROM rust:1.88-slim
+
+# Install system dependencies for building
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy Rust workspace
+COPY core-engine/Cargo.toml ./core-engine/
+COPY core-engine/src ./core-engine/src/
+
+# Build the server
+WORKDIR /app/core-engine
+ENV CARGO_HOME=/tmp/cargo
+RUN cargo build --bin intellishell-server --release
+
+# Runtime stage
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy binary from build stage
+COPY --from=0 /app/core-engine/target/release/intellishell-server /app/intellishell-server
+
+# Create database directory
+RUN mkdir -p /app/data
+
+# Expose port
+EXPOSE 3000
+
+# Run as non-root user
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
+
+CMD ["/app/intellishell-server"]

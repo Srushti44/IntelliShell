@@ -1,0 +1,32 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Repository structure, hygiene, and git baseline. Create directory structure (.kiro/, .github/, docs/, scripts/, config/), complete .gitignore, .editorconfig, LICENSE (MIT), tag prototype-v0, create phase/0-foundation branch. This establishes the foundation for all subsequent work.",
+  "status": "completed",
+  "steps": [
+    "Tag current HEAD as 'prototype-v0' using: cd /mnt/d/3rd\\ year/os\\ project/IntelliShell && git tag prototype-v0",
+    "Create branch 'phase/0-foundation': git checkout -b phase/0-foundation",
+    "Create directory structure: mkdir -p .kiro/steering .kiro/specs/phase-0-foundation .github/workflows docs/adr scripts config",
+    "Update .gitignore to include: target/, __pycache__/, .venv/, node_modules/, dist/, .env, config/local.env, *.log, .ruff_cache/, .pytest_cache/, *.pyc, .DS_Store, uv.lock should NOT be ignored (it gets committed)",
+    "Create .editorconfig with standard rules: root=true, [*] indent_style=space, indent_size=2, end_of_line=lf, charset=utf-8, trim_trailing_whitespace=true, insert_final_newline=true, [*.{rs,toml}] indent_size=4, [*.md] trim_trailing_whitespace=false, [Makefile] indent_style=tab",
+    "Create LICENSE file with MIT license, copyright holder: IntelliShell Contributors",
+    "Commit: git add .gitignore .editorconfig LICENSE && git commit -m 'chore: repository structure and hygiene'"
+  ],
+  "acceptance_criteria": [
+    "Tag prototype-v0 exists: git tag -l | grep prototype-v0",
+    "Branch phase/0-foundation exists and is checked out: git branch --show-current returns phase/0-foundation",
+    "All directories exist: test -d .kiro/steering && test -d .github/workflows && test -d docs/adr && test -d scripts && test -d config",
+    ".gitignore includes all required patterns",
+    ".editorconfig and LICENSE files exist and have correct content",
+    "Clean git status after commit"
+  ],
+  "verification": [
+    "git tag -l | grep prototype-v0",
+    "git branch --show-current",
+    "ls -la .kiro/ .github/ docs/ scripts/ config/",
+    "cat .gitignore | grep -E 'target/|__pycache__|node_modules|config/local.env'",
+    "test -f .editorconfig && test -f LICENSE"
+  ],
+  "blocked_reason": null,
+  "findings": "Successfully created repository structure with all required directories (.kiro/, .github/, docs/, scripts/, config/). Tagged prototype-v0 and created phase/0-foundation branch. Updated .gitignore with all required patterns including target/, __pycache__/, node_modules/, .env, config/local.env, *.log, .ruff_cache/, .pytest_cache/. Created .editorconfig with proper rules for all file types and LICENSE with MIT license. All verification checks pass."
+}

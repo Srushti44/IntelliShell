@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: "cargo"
+    directory: "/core-engine"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "pip"
+    directory: "/ai-service"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "npm"
+    directory: "/dashboard"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

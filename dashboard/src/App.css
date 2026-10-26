@@ -1,0 +1,111 @@
+/* Phase 7 Swiss Design Layout */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code, pre {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--color-background);
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 240px;
+  transition: margin-left 0.3s ease;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content.sidebar-collapsed {
+  margin-left: 64px;
+}
+
+.page-content {
+  flex: 1;
+  padding: 24px 32px;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
+  
+  .page-content {
+    padding: 16px;
+  }
+}
+
+/* Legacy Tailwind utility fallbacks (to be removed as components are updated) */
+.text-blue-600 { color: var(--color-brown-deep); }
+.text-blue-700 { color: var(--color-brown-deep); }
+.bg-blue-50 { background-color: var(--color-surface); }
+.bg-blue-100 { background-color: var(--color-surface); }
+.bg-blue-600 { background-color: var(--color-brown-deep); }
+.bg-blue-700 { background-color: var(--color-brown-deep); }
+.border-blue-200 { border-color: var(--color-border); }
+.border-blue-500 { border-color: var(--color-brown-deep); }
+
+.text-green-600 { color: var(--color-success); }
+.text-green-700 { color: var(--color-success); }
+.bg-green-50 { background-color: var(--color-success-bg); }
+.bg-green-100 { background-color: var(--color-success-bg); }
+.border-green-200 { border-color: var(--color-success); }
+.border-green-500 { border-color: var(--color-success); }
+
+.text-yellow-600 { color: var(--color-warning); }
+.text-yellow-700 { color: var(--color-warning); }
+.text-yellow-800 { color: var(--color-warning); }
+.bg-yellow-50 { background-color: var(--color-warning-bg); }
+.bg-yellow-100 { background-color: var(--color-warning-bg); }
+.border-yellow-200 { border-color: var(--color-warning); }
+.border-yellow-500 { border-color: var(--color-warning); }
+
+.text-red-600 { color: var(--color-error); }
+.text-red-700 { color: var(--color-error); }
+.text-red-800 { color: var(--color-error); }
+.bg-red-50 { background-color: var(--color-error-bg); }
+.bg-red-100 { background-color: var(--color-error-bg); }
+.border-red-200 { border-color: var(--color-error); }
+.border-red-500 { border-color: var(--color-error); }
+
+.text-purple-600 { color: var(--color-terracotta); }
+.bg-purple-50 { background-color: var(--color-surface); }
+
+.text-gray-300 { color: var(--color-text-tertiary); }
+.text-gray-400 { color: var(--color-text-tertiary); }
+.text-gray-500 { color: var(--color-text-secondary); }
+.text-gray-600 { color: var(--color-text-secondary); }
+.text-gray-700 { color: var(--color-text-primary); }
+.text-gray-800 { color: var(--color-text-primary); }
+.text-gray-900 { color: var(--color-text-primary); }
+.bg-gray-50 { background-color: var(--color-background); }
+.bg-gray-100 { background-color: var(--color-surface); }
+.border-gray-100 { border-color: var(--color-border); }
+.border-gray-200 { border-color: var(--color-border); }
+.border-gray-300 { border-color: var(--color-border); }

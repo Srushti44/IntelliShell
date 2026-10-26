@@ -1,0 +1,85 @@
+/**
+ * Swiss-Style Color System
+ * Brown, terracotta, olive, cream palette
+ */
+
+:root {
+  /* Primary palette */
+  --brown-deep: #622B14;
+  --brown-terracotta: #995F2F;
+  --olive-muted: #978F66;
+  --cream-warm: #E4D6A9;
+  --offwhite-main: #FAF8F2;
+  --ink-dark: #25231F;
+
+  /* Semantic colors derived from palette */
+  --color-primary: var(--brown-deep);
+  --color-primary-hover: var(--brown-terracotta);
+  --color-text: var(--ink-dark);
+  --color-text-muted: #6B6761;
+  --color-bg: var(--offwhite-main);
+  --color-bg-subtle: #F5F2EB;
+  --color-border: #DDD8CC;
+  --color-border-strong: #B8AF9F;
+
+  /* Status colors (derived from palette) */
+  --color-success: #7A8B5C;
+  --color-success-bg: #EBF0E4;
+  --color-warning: var(--brown-terracotta);
+  --color-warning-bg: #F7EFE7;
+  --color-error: #8B4539;
+  --color-error-bg: #F7EBE9;
+  --color-info: var(--olive-muted);
+  --color-info-bg: #F2F1EB;
+
+  /* Chart colors */
+  --chart-1: var(--brown-deep);
+  --chart-2: var(--brown-terracotta);
+  --chart-3: var(--olive-muted);
+  --chart-4: var(--cream-warm);
+  --chart-5: #8A7B6E;
+  --chart-6: #B8A58D;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(37, 35, 31, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(37, 35, 31, 0.08), 0 2px 4px -1px rgba(37, 35, 31, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(37, 35, 31, 0.08), 0 4px 6px -2px rgba(37, 35, 31, 0.04);
+}
+
+/* Background classes */
+.bg-primary { background-color: var(--color-primary); }
+.bg-offwhite { background-color: var(--offwhite-main); }
+.bg-subtle { background-color: var(--color-bg-subtle); }
+.bg-cream { background-color: var(--cream-warm); }
+
+/* Text classes */
+.text-primary { color: var(--color-primary); }
+.text-ink { color: var(--ink-dark); }
+.text-muted { color: var(--color-text-muted); }
+.text-terracotta { color: var(--brown-terracotta); }
+.text-olive { color: var(--olive-muted); }
+
+/* Border classes */
+.border-default { border-color: var(--color-border); }
+.border-strong { border-color: var(--color-border-strong); }
+
+/* Status classes */
+.status-success {
+  color: var(--color-success);
+  background-color: var(--color-success-bg);
+}
+
+.status-warning {
+  color: var(--color-warning);
+  background-color: var(--color-warning-bg);
+}
+
+.status-error {
+  color: var(--color-error);
+  background-color: var(--color-error-bg);
+}
+
+.status-info {
+  color: var(--color-info);
+  background-color: var(--color-info-bg);
+}

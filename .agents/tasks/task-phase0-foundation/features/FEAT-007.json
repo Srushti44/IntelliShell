@@ -1,0 +1,36 @@
+{
+  "id": "FEAT-007",
+  "type": "feat",
+  "description": "Quality gates: Makefile, pre-commit hooks, CI workflows, dependabot, and security audit jobs. Create comprehensive Makefile with targets for all operations. Add pre-commit config with formatters and linters. Create GitHub Actions CI with rust/python/web/shellcheck/gitleaks/audit jobs, pinned action SHAs, and dependabot config for all ecosystems.",
+  "status": "completed",
+  "steps": [
+    "Create Makefile at repo root with targets: .PHONY: help bootstrap doctor fmt lint test check llm-smoke clean run-core run-api run-dashboard. help: list all targets with descriptions. bootstrap: call scripts/bootstrap.sh. doctor: call scripts/doctor.sh. fmt: cargo fmt in core-engine/ && ruff format ai-service/ && npm run lint --fix in dashboard/ (if available). lint: cargo clippy --all-targets -- -D warnings in core-engine/ && ruff check ai-service/ && npm run lint in dashboard/. test: cargo test in core-engine/ && pytest in ai-service/ && (npm run test in dashboard/ if test script exists, else echo 'No dashboard tests yet'). check: $(MAKE) lint && $(MAKE) test && $(MAKE) build (where build does cargo build --release && npm run build in dashboard/). llm-smoke: bash scripts/llm-smoke.sh. clean: cargo clean in core-engine/ && rm -rf ai-service/.venv ai-service/__pycache__ ai-service/.pytest_cache ai-service/.ruff_cache && rm -rf dashboard/node_modules dashboard/dist. run-core: cd core-engine && cargo run (note: this is the monitor loop, runs until Ctrl+C). run-api: cd ai-service && uvicorn main:app --host 127.0.0.1 --port 8000 --reload. run-dashboard: cd dashboard && npm run dev -- --host 127.0.0.1 --port 5173.",
+    "Create .pre-commit-config.yaml with repos: pre-commit/pre-commit-hooks (trailing-whitespace, end-of-file-fixer, check-yaml, check-toml, check-json, check-merge-conflict), gitleaks/gitleaks (gitleaks), koalaman/shellcheck-precommit (shellcheck on scripts/), astral-sh/ruff-pre-commit (ruff format and ruff check), doublify/pre-commit-rust (cargo fmt). Use specific rev tags or commits for each repo.",
+    "Create .github/workflows/ci.yml with name: CI, on: [push, pull_request], jobs: rust (runs-on: ubuntu-latest, steps: checkout with actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683, cache with actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 key based on Cargo.lock hash, setup rust via rustup using rust-toolchain.toml, cargo fmt --check, cargo clippy --all-targets -- -D warnings, cargo test -- --skip requires_root (or use cfg(not(feature=ci)) to exclude privileged tests)), python (runs-on: ubuntu-latest, steps: checkout, cache .venv based on uv.lock hash, setup python with actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b, install uv, uv sync, ruff format --check, ruff check, pytest), web (runs-on: ubuntu-latest, steps: checkout, setup node with actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af, cache npm, npm ci in dashboard/, npm run lint, npm run build), shellcheck (runs-on: ubuntu-latest, steps: checkout, run shellcheck scripts/*.sh), gitleaks (runs-on: ubuntu-latest, steps: checkout, run gitleaks/gitleaks-action@v2), cargo-audit (runs-on: ubuntu-latest, steps: checkout, install cargo-audit, cargo audit --deny warnings in core-engine/), pip-audit (runs-on: ubuntu-latest, steps: checkout, setup python, install pip-audit, pip-audit in ai-service/), npm-audit (runs-on: ubuntu-latest, steps: checkout, setup node, npm audit --audit-level=high in dashboard/). Use pinned action SHAs with comments.",
+    "Create .github/dependabot.yml with version: 2, updates: package-ecosystem cargo (directory /core-engine, schedule daily), package-ecosystem pip (directory /ai-service, schedule daily), package-ecosystem npm (directory /dashboard, schedule daily), package-ecosystem github-actions (directory /, schedule weekly)",
+    "Install pre-commit: pip install pre-commit (or via uv tool install pre-commit) if not already available, run pre-commit install in repo root",
+    "Test Makefile targets: make fmt, make lint (may find issues to fix), make test",
+    "Commit: git add Makefile .pre-commit-config.yaml .github/ && git commit -m 'feat(ci): Makefile, pre-commit, CI workflows, dependabot, audit jobs'"
+  ],
+  "acceptance_criteria": [
+    "Makefile exists with all required targets: help, bootstrap, doctor, fmt, lint, test, check, llm-smoke, clean, run-core, run-api, run-dashboard",
+    ".pre-commit-config.yaml exists with hooks for trailing-whitespace, end-of-file, yaml/toml/json checks, merge-conflict, gitleaks, shellcheck, ruff, cargo fmt",
+    ".github/workflows/ci.yml exists with jobs: rust, python, web, shellcheck, gitleaks, cargo-audit, pip-audit, npm-audit",
+    "All third-party GitHub Actions are pinned to full commit SHAs",
+    ".github/dependabot.yml exists with update configs for cargo, pip, npm, github-actions",
+    "make lint passes (after fixing any issues found)",
+    "make test passes",
+    "pre-commit hooks are installed and run successfully"
+  ],
+  "verification": [
+    "test -f Makefile && make help",
+    "test -f .pre-commit-config.yaml",
+    "test -f .github/workflows/ci.yml && grep -E 'actions/checkout@[a-f0-9]{40}|actions/cache@[a-f0-9]{40}' .github/workflows/ci.yml",
+    "test -f .github/dependabot.yml",
+    "make lint",
+    "make test",
+    "pre-commit run --all-files"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

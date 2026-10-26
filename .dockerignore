@@ -1,0 +1,60 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+**/.venv/
+**/.venv
+**/venv/
+**/venv
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+**/__pycache__
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Node
+node_modules/
+dashboard/node_modules/
+dashboard/dist/
+
+# Docs
+docs/
+*.md
+
+# Data
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# CI/CD
+.github/
+.kiro/
+
+# Tests
+tests/

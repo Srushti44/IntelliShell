@@ -1,0 +1,35 @@
+{
+  "id": "FEAT-002",
+  "type": "fix",
+  "description": "Rust toolchain pinning and core-engine fixes. Pin Rust 1.87.0 stable in rust-toolchain.toml. Fix Cargo.toml edition from '2024' to '2021'. Fix unused Sandbox.name field warning in cgroup.rs. Add tests for parse_meminfo_value and /proc/stat parsing. No HTTP server exists in core-engine (it's a CLI monitor), so no 0.0.0.0 binding fix needed.",
+  "status": "completed",
+  "steps": [
+    "Create rust-toolchain.toml at repo root: [toolchain] channel = '1.87.0', components = ['rustfmt', 'clippy']",
+    "Fix core-engine/Cargo.toml: change edition = '2024' to edition = '2021'",
+    "Fix unused Sandbox.name field in core-engine/src/cgroup.rs: rename field to '_name' (indicates intentionally unused) OR add field-level #[allow(dead_code)] with comment explaining it's kept for future observability",
+    "Create core-engine/src/tests.rs with mod tests containing: test_parse_meminfo_value() testing parse_meminfo_value with realistic /proc/meminfo format strings (MemTotal, MemAvailable, edge cases like missing key); test_proc_stat_parsing() testing the logic from read_cpu_ticks that handles process names with spaces and parentheses — extract the parsing logic into a testable function if needed (e.g., parse_proc_stat_line(contents: &str) -> Option<(u64, u64)> that finds last ')' and parses utime/stime)",
+    "Add 'mod tests;' to core-engine/src/main.rs if tests.rs is a separate file, OR add #[cfg(test)] mod tests { } inline at the bottom of main.rs",
+    "Run cargo fmt in core-engine/",
+    "Run cargo clippy --all-targets -- -D warnings in core-engine/ and fix any issues",
+    "Run cargo test in core-engine/ and verify all tests pass",
+    "Commit: git add rust-toolchain.toml core-engine/ && git commit -m 'fix(core): pin Rust 1.87.0, fix edition 2021, fix unused field warning, add tests'"
+  ],
+  "acceptance_criteria": [
+    "rust-toolchain.toml exists with channel 1.87.0 and components rustfmt, clippy",
+    "core-engine/Cargo.toml has edition = '2021'",
+    "core-engine/src/cgroup.rs has no unused field warnings",
+    "core-engine/src/tests.rs or inline tests exist with test_parse_meminfo_value and test_proc_stat_parsing",
+    "cargo fmt --check passes",
+    "cargo clippy --all-targets -- -D warnings passes with zero warnings",
+    "cargo test passes with all tests green"
+  ],
+  "verification": [
+    "cat rust-toolchain.toml",
+    "grep edition core-engine/Cargo.toml",
+    "cd core-engine && cargo fmt --check",
+    "cd core-engine && cargo clippy --all-targets -- -D warnings",
+    "cd core-engine && cargo test"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

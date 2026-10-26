@@ -1,0 +1,45 @@
+{
+  "id": "FEAT-008",
+  "type": "docs",
+  "description": "Documentation: .kiro/steering files, .kiro/specs/phase-0-foundation (requirements.md in EARS notation, design.md, tasks.md), docs/ARCHITECTURE.md, docs/SECURITY.md, docs/PHASES.md, docs/adr/ (4 ADRs), README.md. Complete the documentation foundation for the project.",
+  "status": "completed",
+  "steps": [
+    "Create .kiro/steering/product.md: Project: IntelliShell - AI-Based System Intent Engine for Safe Linux Command Execution. Purpose: AI-assisted command assistant with safety analysis. User: Linux sysadmins and developers in WSL2 environment. Safety philosophy: analyze commands before execution, sandbox dangerous operations, provide safer alternatives.",
+    "Create .kiro/steering/tech.md: Stack: Rust (core-engine CLI monitor with cgroup/namespace isolation), Python 3.13 + FastAPI (ai-service for command classification), React 19 + Vite (dashboard). Toolchain pins: Rust 1.87.0 (rust-toolchain.toml), Node 24 (.nvmrc), Python 3.13 (uv .python-version). Architecture: three independent components, no monorepo workspace, communicate via HTTP APIs on localhost.",
+    "Create .kiro/steering/structure.md: Directories: core-engine/ (Rust), ai-service/ (Python), dashboard/ (React), docs/ (architecture, ADRs, environment, security, phases), scripts/ (bootstrap, doctor, llm-smoke), config/ (default.env, local.env gitignored), .kiro/ (steering, specs), .github/ (workflows, dependabot). Conventions: conventional commits, feature branches, make targets for all operations.",
+    "Create .kiro/steering/security.md: Security rules: all services bind 127.0.0.1 only, secrets in ~/.config/intellishell/ with mode 0600 never in repo, CORS restricted to localhost origins, sudo only for apt/systemd/wsl.conf (documented in ENVIRONMENT.md), no chmod 777, no Windows-side config changes, privilege model: only sandbox component may be privileged.",
+    "Create .kiro/steering/workflow.md: Development workflow: clone to /home/<user>/ (never /mnt/*), run scripts/bootstrap.sh, make doctor to verify environment, work on feature branches, make check before commit, pre-commit hooks enforce formatting and linting, CI runs on all pushes and PRs. Make targets: bootstrap, doctor, fmt, lint, test, check, llm-smoke, clean, run-*.",
+    "Create .kiro/specs/phase-0-foundation/requirements.md in EARS notation (WHEN <condition> THE SYSTEM SHALL <requirement>): R1 Environment verification with doctor.sh FAIL and WARN checks, R2 Pinned toolchains (rust-toolchain.toml, .nvmrc, pyproject.toml with uv), R3 Ollama runtime (systemd service, localhost bind), R4 Repository structure (dirs, .gitignore, .editorconfig, LICENSE), R5 Quality gates (Makefile, linting, testing, pre-commit, CI), R6 Security baseline (localhost bindings, CORS restrictions, secret management), R7 Documentation (steering, specs, architecture, ADRs, README).",
+    "Create .kiro/specs/phase-0-foundation/design.md: Design decisions: use uv for Python (replaces venv+pip), use rust-toolchain.toml for reproducibility, doctor.sh checks cgroup v2 + systemd + kernel version, bootstrap.sh is idempotent, pre-commit hooks enforce formatting before commit, CI excludes privileged tests (cgroup operations), dependabot tracks all four ecosystems (cargo/pip/npm/github-actions), audit jobs fail on high/critical vulnerabilities.",
+    "Create .kiro/specs/phase-0-foundation/tasks.md: Task checklist mirroring the 8 FEATs with their steps and verification commands.",
+    "Create docs/ARCHITECTURE.md with Mermaid diagram: components (core-engine CLI monitor, ai-service FastAPI, dashboard React, Ollama LLM), data flow (user -> dashboard -> ai-service -> Ollama, ai-service -> core-engine for sandboxing), ports (3000 core, 8000 ai, 5173 dashboard, 11434 ollama), all on 127.0.0.1.",
+    "Create docs/SECURITY.md: Assets (Linux system, user files, system processes), Actors (user, dashboard, ai-service, core-engine, kernel), Trust boundaries (browser <-> dashboard <-> ai-service <-> core-engine <-> kernel). Privilege model: only sandbox/process-control in core-engine may be privileged (requires root for cgroup delegation), ai-service and dashboard run unprivileged, all listeners bind 127.0.0.1, secrets never in repo. Known issues (do NOT fix in Phase 0): /execute trusts caller's risk_level (Phase 5 owner), core-engine runs as root with no auth (Phase 5), sandbox shares host filesystem (Phase 3), /proc mount may leak (Phase 3), signal safety issues (Phase 2), Ollama auth (Phase 4), no audit log (Phase 6).",
+    "Create docs/PHASES.md: Phase 0 (Foundation - current), Phase 1 (TBD), Phase 2 (Signal safety), Phase 3 (Filesystem isolation), Phase 4 (LLM integration), Phase 5 (Auth), Phase 6 (Audit logging).",
+    "Create docs/adr/0001-record-decisions.md: ADR 1 - Record architecture decisions using Markdown ADRs in docs/adr/. Status: Accepted. Context: need to track key decisions. Decision: use lightweight ADR format. Consequences: decisions are documented and searchable.",
+    "Create docs/adr/0002-rust-core-engine.md: ADR 2 - Use Rust for core-engine. Status: Accepted. Context: need low-level system access for cgroups, namespaces, signals. Decision: Rust with libc bindings. Alternatives: Go (higher level), C (unsafe). Consequences: memory safety with system-level control.",
+    "Create docs/adr/0003-uv-python-package-manager.md: ADR 3 - Use uv for Python package management. Status: Accepted. Context: need reproducible Python environments. Decision: uv with uv.lock instead of venv+requirements.txt. Alternatives: poetry, pipenv. Consequences: faster installs, committed lock file, python-version pin.",
+    "Create docs/adr/0004-rule-based-risk.md: ADR 4 - Use rule-based risk classification in Phase 0. Status: Accepted. Context: need command safety analysis. Decision: pattern-matching rules in ai-service. Alternatives: LLM-only (Phase 4). Consequences: deterministic, fast, limited to known patterns, no context awareness yet.",
+    "Create README.md: # IntelliShell, AI-Based System Intent Engine for Safe Linux Command Execution. Status: Phase 0 - Foundation (prototype, unpushed commits). Description: AI-assisted Linux command assistant with safety analysis and sandboxing, three components (core-engine Rust CLI, ai-service Python FastAPI, dashboard React). Quickstart: Prerequisites (WSL2 Ubuntu, kernel >= 5.15, systemd, cgroup v2), Clone to /home/<user>/ (not /mnt/*), Run scripts/bootstrap.sh, Run make doctor, Run make check. Components table: core-engine (Rust 1.87.0, process monitor + cgroup sandbox, port 3000), ai-service (Python 3.13, command classification, port 8000), dashboard (Node 24 + React 19, web UI, port 5173). Development: make help for all targets, Feature branches, Conventional commits, Pre-commit hooks enforce formatting. Documentation: docs/ARCHITECTURE.md, docs/SECURITY.md, docs/ENVIRONMENT.md, docs/PHASES.md. License: MIT.",
+    "Commit: git add .kiro/ docs/ README.md && git commit -m 'docs: complete documentation foundation (steering, specs, architecture, ADRs, README)'"
+  ],
+  "acceptance_criteria": [
+    "All .kiro/steering/ files exist: product.md, tech.md, structure.md, security.md, workflow.md",
+    "All .kiro/specs/phase-0-foundation/ files exist: requirements.md (EARS notation), design.md, tasks.md",
+    "All docs/ files exist: ARCHITECTURE.md (with Mermaid diagram), SECURITY.md (with known issues and phase owners), PHASES.md, ENVIRONMENT.md (from FEAT-006)",
+    "All four ADRs exist in docs/adr/: 0001-record-decisions.md, 0002-rust-core-engine.md, 0003-uv-python-package-manager.md, 0004-rule-based-risk.md",
+    "README.md exists with project description, quickstart, component table, development workflow, documentation links",
+    "README clearly states prerequisite: repo must be in /home/<user>/, not /mnt/*"
+  ],
+  "verification": [
+    "ls -la .kiro/steering/ && test $(ls .kiro/steering/*.md | wc -l) -eq 5",
+    "ls -la .kiro/specs/phase-0-foundation/ && test $(ls .kiro/specs/phase-0-foundation/*.md | wc -l) -eq 3",
+    "test -f docs/ARCHITECTURE.md && grep -i mermaid docs/ARCHITECTURE.md",
+    "test -f docs/SECURITY.md && grep 'Phase 5' docs/SECURITY.md",
+    "test -f docs/PHASES.md",
+    "ls docs/adr/ && test $(ls docs/adr/*.md | wc -l) -eq 4",
+    "test -f README.md && grep -E 'IntelliShell|quickstart|Component' README.md",
+    "grep '/home/' README.md && grep -v '/mnt/' README.md || true"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

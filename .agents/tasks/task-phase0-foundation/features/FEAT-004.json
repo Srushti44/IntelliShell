@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-004",
+  "type": "chore",
+  "description": "Node/dashboard toolchain setup. Pin Node 24 in .nvmrc, add engines field to dashboard/package.json, generate and commit package-lock.json for reproducible builds.",
+  "status": "completed",
+  "steps": [
+    "Create .nvmrc at repo root containing: 24",
+    "Add engines field to dashboard/package.json: 'engines': {'node': '>=24.0.0', 'npm': '>=10.0.0'}",
+    "Run 'npm install' in dashboard/ to generate package-lock.json (this will use npm from the Node 24 installation)",
+    "Verify package-lock.json was created and has lockfileVersion 3 or higher",
+    "Run 'npm run lint' in dashboard/ to verify linting passes",
+    "Run 'npm run build' in dashboard/ to verify build succeeds",
+    "Commit: git add .nvmrc dashboard/package.json dashboard/package-lock.json && git commit -m 'chore(dashboard): pin Node 24, add engines, commit package-lock.json'"
+  ],
+  "acceptance_criteria": [
+    ".nvmrc exists at repo root with content '24'",
+    "dashboard/package.json has engines field specifying node >= 24.0.0",
+    "dashboard/package-lock.json exists and is committed",
+    "npm run lint passes in dashboard/",
+    "npm run build succeeds in dashboard/"
+  ],
+  "verification": [
+    "cat .nvmrc",
+    "grep engines dashboard/package.json",
+    "test -f dashboard/package-lock.json",
+    "cd dashboard && npm run lint",
+    "cd dashboard && npm run build"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

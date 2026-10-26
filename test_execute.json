@@ -1,0 +1,5 @@
+{
+  "command": "ls",
+  "args": ["-la"],
+  "risk_level": "LOW"
+}
