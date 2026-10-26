@@ -42,7 +42,7 @@ IntelliShell is an intelligent command-line assistant that translates natural la
 
 ---
 
-## 🏗️ Architectureer
+## 🏗️ Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
