@@ -70,10 +70,13 @@ export const rustApi = {
 
   /**
    * Get system snapshot (CPU, RAM, processes)
+   * @param {string} os - Operating system: "linux" or "windows"
    */
-  async getSnapshot() {
+  async getSnapshot(os = 'linux') {
     try {
-      const response = await rustClient.get('/snapshot');
+      const response = await rustClient.get('/snapshot', {
+        params: { os }
+      });
       return response.data;
     } catch (error) {
       handleError(error, 'Rust Server');
@@ -157,10 +160,11 @@ export const pythonApi = {
   /**
    * Generate command from natural language
    * @param {string} query - Natural language description
+   * @param {string} os - Operating system: "linux" or "windows"
    */
-  async generateCommand(query) {
+  async generateCommand(query, os = 'linux') {
     try {
-      const response = await pythonClient.post('/generate-command', { query });
+      const response = await pythonClient.post('/generate-command', { query, os });
       return response.data;
     } catch (error) {
       handleError(error, 'Python AI Service');

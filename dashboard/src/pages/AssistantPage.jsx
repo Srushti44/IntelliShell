@@ -15,11 +15,12 @@ import { ErrorAlert } from '../components/ErrorAlert';
 
 export function AssistantPage() {
   const [query, setQuery] = useState('');
+  const [selectedOS, setSelectedOS] = useState('linux'); // NEW: OS selection state
   const [generated, setGenerated] = useState(null);
   const [executionResult, setExecutionResult] = useState(null);
 
   const generateMutation = useMutation({
-    mutationFn: (query) => pythonApi.generateCommand(query),
+    mutationFn: (queryData) => pythonApi.generateCommand(queryData.query, queryData.os),
     onSuccess: (data) => {
       setGenerated(data);
       setExecutionResult(null); // Clear previous execution result
@@ -37,7 +38,7 @@ export function AssistantPage() {
     if (!query.trim()) return;
     setGenerated(null);
     setExecutionResult(null);
-    generateMutation.mutate(query);
+    generateMutation.mutate({ query, os: selectedOS });
   };
 
   const handleCopy = (text) => {
@@ -54,13 +55,57 @@ export function AssistantPage() {
     <>
       <TopBar 
         title="AI Command Assistant" 
-        subtitle="Generate Linux commands from natural language"
+        subtitle="Generate Linux and Windows commands from natural language"
       />
       
       <main className="p-8" style={{ backgroundColor: 'var(--color-bg-subtle)' }}>
         <PageSection
-          description="Describe what you want to accomplish in plain language. IntelliShell will generate the appropriate Linux command, explain what it does, assess its risk level, and suggest safer alternatives when applicable. Review all generated commands carefully before execution."
+          description="Select your operating system, then describe what you want to accomplish in plain language. IntelliShell will generate the appropriate command, explain what it does, assess its risk level, and suggest safer alternatives when applicable. Review all generated commands carefully before execution."
         >
+          {/* OS Selector */}
+          <div className="bg-white rounded-lg border p-6 mb-4" style={{ borderColor: 'var(--color-border)' }}>
+            <label className="block text-sm font-medium mb-3" style={{ color: 'var(--ink-dark)' }}>
+              Select Operating System
+            </label>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSelectedOS('linux')}
+                className={`flex-1 px-6 py-3 rounded-md font-medium border-2 transition-all ${
+                  selectedOS === 'linux'
+                    ? 'border-brown-deep bg-brown-deep text-cream-warm'
+                    : 'border-gray-300 bg-white text-ink-dark hover:border-brown-deep'
+                }`}
+                style={{
+                  borderColor: selectedOS === 'linux' ? 'var(--brown-deep)' : 'var(--color-border)',
+                  backgroundColor: selectedOS === 'linux' ? 'var(--brown-deep)' : 'white',
+                  color: selectedOS === 'linux' ? 'var(--cream-warm)' : 'var(--ink-dark)',
+                }}
+              >
+                🐧 Linux (WSL2)
+              </button>
+              <button
+                onClick={() => setSelectedOS('windows')}
+                className={`flex-1 px-6 py-3 rounded-md font-medium border-2 transition-all ${
+                  selectedOS === 'windows'
+                    ? 'border-brown-deep bg-brown-deep text-cream-warm'
+                    : 'border-gray-300 bg-white text-ink-dark hover:border-brown-deep'
+                }`}
+                style={{
+                  borderColor: selectedOS === 'windows' ? 'var(--brown-deep)' : 'var(--color-border)',
+                  backgroundColor: selectedOS === 'windows' ? 'var(--brown-deep)' : 'white',
+                  color: selectedOS === 'windows' ? 'var(--cream-warm)' : 'var(--ink-dark)',
+                }}
+              >
+                🪟 Windows (Host)
+              </button>
+            </div>
+            <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>
+              {selectedOS === 'linux' 
+                ? 'Commands will execute inside WSL2 Linux environment' 
+                : 'Commands will execute on Windows host using PowerShell'}
+            </p>
+          </div>
+
           {/* Input Form */}
           <div className="bg-white rounded-lg border p-6 mb-6" style={{ borderColor: 'var(--color-border)' }}>
             <label className="block text-sm font-medium mb-3" style={{ color: 'var(--ink-dark)' }}>
@@ -124,9 +169,17 @@ export function AssistantPage() {
           {generated && (
             <div className="bg-white rounded-lg border p-6" style={{ borderColor: 'var(--color-border)' }}>
               <div className="flex items-center justify-between mb-4">
-                <h4 className="font-heading font-semibold text-lg" style={{ color: 'var(--ink-dark)' }}>
-                  Generated Command
-                </h4>
+                <div className="flex items-center gap-3">
+                  <h4 className="font-heading font-semibold text-lg" style={{ color: 'var(--ink-dark)' }}>
+                    Generated Command
+                  </h4>
+                  <span className="text-sm px-3 py-1 rounded-full" style={{ 
+                    backgroundColor: 'var(--color-bg-subtle)', 
+                    color: 'var(--color-text-muted)' 
+                  }}>
+                    {generated.os === 'linux' ? '🐧 Linux' : '🪟 Windows'}
+                  </span>
+                </div>
                 <StatusBadge type="risk">{generated.risk_level}</StatusBadge>
               </div>
 

@@ -225,6 +225,12 @@ struct ExecuteRequest {
     risk_level: String,
     #[serde(default)]
     timeout_seconds: u64,
+    #[serde(default = "default_os")]
+    os: String, // "linux" or "windows"
+}
+
+fn default_os() -> String {
+    "linux".to_string() // Backward compatibility
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -337,7 +343,21 @@ async fn health_check(State(state): State<AppState>) -> Json<HealthResponse> {
 }
 
 /// Get system monitoring snapshot
-async fn get_snapshot(State(state): State<AppState>) -> Result<Json<SystemSnapshot>, ApiError> {
+async fn get_snapshot(
+    State(state): State<AppState>,
+    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> Result<Json<SystemSnapshot>, ApiError> {
+    let os = params.get("os").map(|s| s.as_str()).unwrap_or("linux");
+    
+    match os {
+        "linux" => get_linux_snapshot(&state).await,
+        "windows" => get_windows_snapshot(&state).await,
+        _ => Err(ApiError::InvalidRequest(format!("Invalid OS parameter: {}", os))),
+    }
+}
+
+/// Get Linux system snapshot
+async fn get_linux_snapshot(state: &AppState) -> Result<Json<SystemSnapshot>, ApiError> {
     // Read system metrics
     let mem_contents = std::fs::read_to_string("/proc/meminfo")
         .map_err(|e| ApiError::Execution(format!("Failed to read meminfo: {}", e)))?;
@@ -380,12 +400,80 @@ async fn get_snapshot(State(state): State<AppState>) -> Result<Json<SystemSnapsh
     }))
 }
 
+/// Get Windows system snapshot
+async fn get_windows_snapshot(_state: &AppState) -> Result<Json<SystemSnapshot>, ApiError> {
+    use crate::windows_telemetry::WindowsTelemetryService;
+    
+    // Get CPU usage
+    let cpu_percent = WindowsTelemetryService::get_cpu_usage()
+        .await
+        .unwrap_or(0.0);
+    
+    // Get memory info
+    let (memory_total_bytes, memory_available_bytes, memory_used_bytes) = 
+        WindowsTelemetryService::get_memory_info()
+            .await
+            .unwrap_or((0, 0, 0));
+    
+    let memory_used_percent = if memory_total_bytes > 0 {
+        (memory_used_bytes as f64 / memory_total_bytes as f64) * 100.0
+    } else {
+        0.0
+    };
+    
+    // Get disk info
+    let (disk_total_bytes, disk_used_bytes, disk_used_percent) = 
+        WindowsTelemetryService::get_disk_info()
+            .await
+            .unwrap_or((0, 0, 0.0));
+    
+    // Get network stats
+    let (network_rx_bytes, network_tx_bytes) = 
+        WindowsTelemetryService::get_network_stats()
+            .await
+            .unwrap_or((0, 0));
+    
+    // Get top processes
+    let windows_processes = WindowsTelemetryService::get_top_processes(10)
+        .await
+        .unwrap_or_default();
+    
+    // Convert to ProcessInfo format
+    let processes = windows_processes.into_iter().map(|p| ProcessInfo {
+        pid: p.pid,
+        name: p.name,
+        state: "running".to_string(), // Windows doesn't have detailed state like Linux
+        memory_kb: p.memory_kb,
+        cpu_percent: p.cpu_percent,
+    }).collect();
+    
+    Ok(Json(SystemSnapshot {
+        cpu_percent,
+        memory_total_bytes,
+        memory_used_bytes,
+        memory_available_bytes,
+        memory_used_percent,
+        disk_total_bytes,
+        disk_used_bytes,
+        disk_used_percent,
+        network_rx_bytes,
+        network_tx_bytes,
+        processes,
+        timestamp: chrono::Utc::now().timestamp(),
+    }))
+}
+
 /// Execute command with risk-based routing
 async fn execute_command(
     State(state): State<AppState>,
     Json(req): Json<ExecuteRequest>,
 ) -> Result<Json<ExecuteResponse>, ApiError> {
-    info!("Execute request: command='{}', risk_level='{}'", req.command, req.risk_level);
+    info!("Execute request: command='{}', risk_level='{}', os='{}'", req.command, req.risk_level, req.os);
+
+    // Validate OS
+    if req.os != "linux" && req.os != "windows" {
+        return Err(ApiError::InvalidRequest(format!("Invalid OS: {}. Must be 'linux' or 'windows'", req.os)));
+    }
 
     // Validate command (prevent empty or obviously malicious patterns)
     if req.command.trim().is_empty() {
@@ -424,12 +512,25 @@ async fn execute_command(
         }
     };
 
-    // Risk-based routing
+    // CRITICAL: OS routing BEFORE risk routing
+    match req.os.as_str() {
+        "linux" => execute_linux_pipeline(&req, &state, history_id).await,
+        "windows" => execute_windows_pipeline(&req, &state, history_id).await,
+        _ => Err(ApiError::InvalidRequest(format!("Invalid OS: {}", req.os))),
+    }
+}
+
+/// Execute Linux command pipeline
+async fn execute_linux_pipeline(
+    req: &ExecuteRequest,
+    state: &AppState,
+    history_id: i64,
+) -> Result<Json<ExecuteResponse>, ApiError> {
     let risk_level = req.risk_level.to_lowercase();
     
     match risk_level.as_str() {
         "high" | "critical" => {
-            warn!("Blocked high-risk command: {}", req.command);
+            warn!("Blocked high-risk Linux command: {}", req.command);
             
             // Record blocked status if we have a valid history_id
             if history_id >= 0 {
@@ -456,12 +557,64 @@ async fn execute_command(
             }))
         }
         "medium" | "warn" => {
-            info!("Executing command in sandbox: {}", req.command);
+            info!("Executing Linux command in sandbox: {}", req.command);
             execute_sandboxed(&req.command, req.timeout_seconds, &state.db, history_id).await
         }
         "low" | "safe" => {
-            info!("Executing command directly: {}", req.command);
+            info!("Executing Linux command directly: {}", req.command);
             execute_direct(&req.command, req.timeout_seconds, &state.db, history_id).await
+        }
+        _ => {
+            Err(ApiError::InvalidRequest(format!("Invalid risk level: {}", req.risk_level)))
+        }
+    }
+}
+
+/// Execute Windows command pipeline
+async fn execute_windows_pipeline(
+    req: &ExecuteRequest,
+    state: &AppState,
+    history_id: i64,
+) -> Result<Json<ExecuteResponse>, ApiError> {
+    use crate::windows_executor::WindowsExecutionService;
+    
+    let risk_level = req.risk_level.to_lowercase();
+    
+    match risk_level.as_str() {
+        "high" | "critical" => {
+            warn!("Blocked high-risk Windows command: {}", req.command);
+            
+            // Record blocked status if we have a valid history_id
+            if history_id >= 0 {
+                if let Err(e) = state.db.update_execution(
+                    history_id,
+                    "blocked".to_string(),
+                    None,
+                    None,
+                    None,
+                    None,
+                ).await {
+                    warn!("Failed to update history for blocked command: {}", e);
+                }
+            }
+            
+            Ok(Json(ExecuteResponse {
+                executed: false,
+                method: "blocked".to_string(),
+                exit_code: None,
+                stdout: String::new(),
+                stderr: String::new(),
+                message: format!("Command blocked due to {} risk level", risk_level),
+                duration_ms: None,
+            }))
+        }
+        "medium" | "warn" => {
+            info!("Executing Windows command with job control: {}", req.command);
+            execute_windows_sandboxed(&req.command, req.timeout_seconds, &state.db, history_id).await
+        }
+        "low" | "safe" => {
+            info!("Executing Windows command directly: {}", req.command);
+            execute_windows_direct(&req.command, req.timeout_seconds, &state.db, history_id).await
         }
         _ => {
             Err(ApiError::InvalidRequest(format!("Invalid risk level: {}", req.risk_level)))
@@ -602,6 +755,74 @@ async fn execute_sandboxed(command: &str, _timeout_seconds: u64, db: &Database, 
             Err(ApiError::Execution(format!("Sandbox execution failed: {:?}", e)))
         }
     }
+}
+
+/// Execute Windows command directly (for LOW risk only)
+async fn execute_windows_direct(command: &str, timeout_seconds: u64, db: &Database, history_id: i64) -> Result<Json<ExecuteResponse>, ApiError> {
+    use crate::windows_executor::WindowsExecutionService;
+    
+    let result = WindowsExecutionService::execute_direct(command, timeout_seconds)
+        .await
+        .map_err(|e| ApiError::Execution(e.to_string()))?;
+    
+    // Update history record with execution result
+    if history_id >= 0 {
+        let status = if result.exit_code == Some(0) { "completed" } else { "failed" };
+        if let Err(e) = db.update_execution(
+            history_id,
+            status.to_string(),
+            result.exit_code,
+            Some(result.stdout.clone()),
+            Some(result.stderr.clone()),
+            result.duration_ms.map(|d| d as i64),
+        ).await {
+            warn!("Failed to update history after Windows direct execution: {}", e);
+        }
+    }
+    
+    Ok(Json(ExecuteResponse {
+        executed: result.executed,
+        method: result.method,
+        exit_code: result.exit_code,
+        stdout: result.stdout,
+        stderr: result.stderr,
+        message: result.message,
+        duration_ms: result.duration_ms,
+    }))
+}
+
+/// Execute Windows command with job control (for MEDIUM risk)
+async fn execute_windows_sandboxed(command: &str, timeout_seconds: u64, db: &Database, history_id: i64) -> Result<Json<ExecuteResponse>, ApiError> {
+    use crate::windows_executor::WindowsExecutionService;
+    
+    let result = WindowsExecutionService::execute_sandboxed(command, timeout_seconds)
+        .await
+        .map_err(|e| ApiError::Execution(e.to_string()))?;
+    
+    // Update history record with execution result
+    if history_id >= 0 {
+        let status = if result.exit_code == Some(0) { "completed" } else { "failed" };
+        if let Err(e) = db.update_execution(
+            history_id,
+            status.to_string(),
+            result.exit_code,
+            Some(result.stdout.clone()),
+            Some(result.stderr.clone()),
+            result.duration_ms.map(|d| d as i64),
+        ).await {
+            warn!("Failed to update history after Windows sandboxed execution: {}", e);
+        }
+    }
+    
+    Ok(Json(ExecuteResponse {
+        executed: result.executed,
+        method: result.method,
+        exit_code: result.exit_code,
+        stdout: result.stdout,
+        stderr: result.stderr,
+        message: result.message,
+        duration_ms: result.duration_ms,
+    }))
 }
 
 /// Get command history

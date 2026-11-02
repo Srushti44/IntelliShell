@@ -91,7 +91,7 @@ if PROVIDERS_AVAILABLE:
     except Exception as e:
         print(f"❌ Failed to initialize provider manager: {e}")
 
-SYSTEM_INSTRUCTIONS = """You are an expert Linux command generator and system administrator. Your job is to translate natural language requests into precise, safe, and effective Linux commands.
+LINUX_SYSTEM_INSTRUCTIONS = """You are an expert Linux command generator and system administrator. Your job is to translate natural language requests into precise, safe, and effective Linux commands.
 
 CRITICAL RULES:
 1. Respond with ONLY a JSON object - no markdown, no code blocks, no extra text
@@ -145,14 +145,65 @@ Request: "check memory usage"
 Request: "list files in D drive 3rd year folder"
 {"command": "ls \"/mnt/d/3rd year\"", "explanation": "Lists files in the Windows D drive '3rd year' directory, accessed via WSL mount with proper quoting for the space"}
 
-Request: "show my Windows documents"
-{"command": "ls \"/mnt/c/Users/$USER/Documents\"", "explanation": "Lists files in your Windows Documents folder via WSL's C drive mount"}
+Now respond to the user's request with ONLY the JSON object:"""
 
-Request: "open D drive"
-{"command": "ls /mnt/d/", "explanation": "Lists the contents of the Windows D drive via WSL mount point"}
+WINDOWS_SYSTEM_INSTRUCTIONS = """You are an expert Windows PowerShell command generator and system administrator. Your job is to translate natural language requests into precise, safe, and effective PowerShell commands.
+
+CRITICAL RULES:
+1. Respond with ONLY a JSON object - no markdown, no code blocks, no extra text
+2. The JSON must have exactly these two fields:
+   {"command": "<single PowerShell command>", "explanation": "<clear one-sentence explanation>"}
+3. Use ONLY real, standard PowerShell cmdlets that actually exist
+4. Generate commands that are safe by default - avoid destructive operations unless explicitly requested
+5. Prefer non-destructive alternatives when possible (e.g., Get-ChildItem instead of Remove-Item)
+6. Keep commands simple and focused on the specific task requested
+7. Use proper quoting for paths with spaces
+
+COMMAND GENERATION GUIDELINES:
+- File operations: Use Get-ChildItem, Get-Content, Copy-Item, Move-Item (avoid Remove-Item unless explicitly requested)
+- Process management: Use Get-Process, Stop-Process (with proper signal), Get-Service, Stop-Service
+- System info: Use Get-PSDrive, Get-ComputerInfo, Get-CimInstance Win32_OperatingSystem
+- Text processing: Use Select-String, Where-Object, Sort-Object, Measure-Object
+- Network: Use Test-Connection, Invoke-WebRequest, Get-NetIPConfiguration (avoid firewall changes)
+- Permissions: Use Get-Acl, Set-Acl (avoid recursive changes to system directories)
+- Package management: Use Get-Package, Find-Package (avoid Install/Uninstall unless explicitly requested)
+
+SAFETY PRINCIPLES:
+- Never generate commands that:
+  * Delete system directories (C:\Windows, C:\Program Files, etc.)
+  * Modify critical system files without explicit request
+  * Format volumes or clear disks
+  * Shutdown/reboot without explicit request
+  * Download and execute untrusted code
+  * Disable security features
+- For potentially destructive operations, use the safest minimal approach
+- Add -WhatIf or -Confirm parameters for destructive operations
+
+POWERSHELL CONVENTIONS:
+- Use verb-noun cmdlet naming (Get-Process, Set-Content, etc.)
+- Use proper parameter names with - prefix
+- Use pipeline | for chaining commands
+- Use single quotes for literal strings, double quotes for variable expansion
+- Path separators are backslashes \ (or forward slashes / also work)
+
+EXAMPLES:
+Request: "show me the largest files in my documents"
+{"command": "Get-ChildItem $env:USERPROFILE\\Documents -Recurse -File | Sort-Object Length -Descending | Select-Object -First 20", "explanation": "Lists the 20 largest files in your Documents folder sorted by size"}
+
+Request: "check memory usage"
+{"command": "Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize,FreePhysicalMemory", "explanation": "Displays system memory usage including total and free memory"}
+
+Request: "list running processes"
+{"command": "Get-Process | Sort-Object CPU -Descending | Select-Object -First 10", "explanation": "Lists the top 10 processes by CPU usage"}
 
 Request: "find large files on C drive"
-{"command": "du -ah \"/mnt/c/Users/$USER\" | sort -rh | head -20", "explanation": "Finds the 20 largest files/folders in your Windows user profile via WSL"}
+{"command": "Get-ChildItem C:\\Users\\$env:USERNAME -Recurse -File | Where-Object {$_.Length -gt 100MB} | Sort-Object Length -Descending | Select-Object -First 20", "explanation": "Finds the 20 largest files over 100MB in your user profile"}
+
+Request: "check current directory"
+{"command": "Get-Location", "explanation": "Displays the current working directory"}
+
+Request: "list all services"
+{"command": "Get-Service | Sort-Object Status,Name", "explanation": "Lists all Windows services sorted by status and name"}
 
 Now respond to the user's request with ONLY the JSON object:"""
 
@@ -180,6 +231,7 @@ def log_activity(event_type: str, query: str, command: str, risk_level: str, det
 class CommandRequest(BaseModel):
     """Natural language command request."""
     query: str
+    os: str = "linux"  # "linux" or "windows"
 
 
 class CommandResponse(BaseModel):
@@ -195,6 +247,7 @@ class CommandResponse(BaseModel):
     confirmation_token: str
     provider_used: str
     generation_latency_ms: int
+    os: str  # "linux" or "windows"
 
 
 class ConfirmRequest(BaseModel):
@@ -266,33 +319,47 @@ def health_check():
 @app.post("/generate-command", response_model=CommandResponse)
 def generate_command(request: CommandRequest):
     """
-    Generate a Linux command from natural language query.
+    Generate a command from natural language query.
+    Supports both Linux and Windows operating systems.
     
     Process:
-    1. Send query to AI provider (Ollama primary, Groq fallback)
-    2. Extract and validate structured JSON response
-    3. Run independent risk classification
-    4. Analyze filesystem/process impact
-    5. Generate deterministic safer alternative
-    6. Issue one-time confirmation token
+    1. Select OS-specific system instructions
+    2. Send query to AI provider (Groq)
+    3. Extract and validate structured JSON response
+    4. Run OS-specific risk classification
+    5. Analyze impact (if applicable)
+    6. Generate deterministic safer alternative
+    7. Issue one-time confirmation token
     
     Args:
-        request: CommandRequest with natural language query
+        request: CommandRequest with natural language query and OS selection
     
     Returns:
         CommandResponse with command, explanation, risk assessment, and token
     
     Raises:
+        HTTPException 400: Invalid OS parameter
         HTTPException 502: Provider unavailable or malformed output
+        HTTPException 503: AI provider not configured
         HTTPException 504: Provider timeout
     """
+    # Validate OS
+    if request.os not in ["linux", "windows"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid OS: {request.os}. Must be 'linux' or 'windows'"
+        )
+    
     if not provider_manager:
         raise HTTPException(
             status_code=503,
             detail="AI provider not available - check service configuration"
         )
     
-    full_prompt = f"{SYSTEM_INSTRUCTIONS}\n\nRequest: {request.query}"
+    # Select OS-specific system instructions
+    system_instructions = LINUX_SYSTEM_INSTRUCTIONS if request.os == "linux" else WINDOWS_SYSTEM_INSTRUCTIONS
+    
+    full_prompt = f"{system_instructions}\n\nRequest: {request.query}"
     
     # Generate using provider manager (handles fallback automatically)
     try:
@@ -320,15 +387,24 @@ def generate_command(request: CommandRequest):
     # Get explanation (with fallback)
     explanation = parsed.get("explanation", "(model did not provide an explanation)")
     
-    # Deterministic safer alternative (rule-based, not AI-generated)
-    safer_alternative = suggest_safer_alternative(command)
+    # OS-specific risk classification and safer alternatives
+    if request.os == "windows":
+        from intellishell_ai_service.windows_risk import classify_windows_command, suggest_safer_alternative_windows
+        risk_level_enum, risk_reason = classify_windows_command(command)
+        safer_alternative = suggest_safer_alternative_windows(command)
+    else:
+        # Linux risk classification
+        risk_level_enum, risk_reason = classify_command(command)
+        safer_alternative = suggest_safer_alternative(command)
     
-    # Independent risk classification (deterministic, not AI-generated)
-    risk_level_enum, risk_reason = classify_command(command)
     risk_level = risk_level_enum.value
     
-    # Real impact analysis (filesystem/process inspection)
-    impact_context = analyze_impact(command)
+    # Impact analysis (Linux only for now, Windows could be added later)
+    impact_context = ""
+    if request.os == "linux":
+        impact_context = analyze_impact(command)
+    else:
+        impact_context = "Impact analysis not yet available for Windows commands"
     
     # Generate one-time confirmation token
     token = str(uuid.uuid4())
@@ -336,6 +412,7 @@ def generate_command(request: CommandRequest):
         "command": command,
         "risk_level": risk_level,
         "query": request.query,
+        "os": request.os,  # Store OS for execution routing
         "created_at": time.time(),
     }
     
@@ -354,6 +431,7 @@ def generate_command(request: CommandRequest):
         confirmation_token=token,
         provider_used=response.provider.value,
         generation_latency_ms=response.latency_ms,
+        os=request.os,
     )
 
 
@@ -367,6 +445,7 @@ def confirm_execute(request: ConfirmRequest):
     - Commands must be explicitly confirmed
     - Tokens are one-time use only
     - Tokens expire after TTL
+    - OS context is preserved from generation to execution
     
     Args:
         request: ConfirmRequest with confirmation token
@@ -394,7 +473,7 @@ def confirm_execute(request: ConfirmRequest):
             detail="Confirmation token expired -- please regenerate the command",
         )
     
-    # Forward to core-engine for execution
+    # Forward to core-engine for execution with OS parameter
     try:
         response = requests.post(
             f"{CORE_ENGINE_URL}/execute",
@@ -402,6 +481,7 @@ def confirm_execute(request: ConfirmRequest):
                 "command": entry["command"],
                 "risk_level": entry["risk_level"],
                 "timeout_seconds": 30,
+                "os": entry.get("os", "linux"),  # Include OS parameter
             },
             timeout=35,
         )
