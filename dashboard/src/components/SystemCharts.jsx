@@ -15,7 +15,7 @@ export function SystemCharts({ currentSnapshot, className = '' }) {
 
   // Update history when new snapshot arrives via prop
   useEffect(() => {
-    if (!currentSnapshot?.system) return;
+    if (!currentSnapshot) return;
 
     const dataPoint = {
       timestamp: new Date().toLocaleTimeString('en-US', { 
@@ -24,11 +24,11 @@ export function SystemCharts({ currentSnapshot, className = '' }) {
         minute: '2-digit', 
         second: '2-digit' 
       }),
-      cpuUsage: currentSnapshot.system.cpu_usage || 0,
-      memoryUsage: currentSnapshot.system.memory_used_percent || 0,
-      diskUsage: currentSnapshot.system.disk_used_percent || 0,
-      networkRx: (currentSnapshot.system.network_rx_bytes || 0) / 1024 / 1024, // MB
-      networkTx: (currentSnapshot.system.network_tx_bytes || 0) / 1024 / 1024, // MB
+      cpuUsage: currentSnapshot.cpu_percent || 0,
+      memoryUsage: currentSnapshot.memory_used_percent || 0,
+      diskUsage: currentSnapshot.disk_used_percent || 0,
+      networkRx: (currentSnapshot.network_rx_bytes || 0) / 1024 / 1024, // MB
+      networkTx: (currentSnapshot.network_tx_bytes || 0) / 1024 / 1024, // MB
       processCount: currentSnapshot.processes?.length || 0
     };
 
@@ -61,11 +61,11 @@ export function SystemCharts({ currentSnapshot, className = '' }) {
             minute: '2-digit', 
             second: '2-digit' 
           }),
-          cpuUsage: data.system?.cpu_usage || 0,
-          memoryUsage: data.system?.memory_used_percent || 0,
-          diskUsage: data.system?.disk_used_percent || 0,
-          networkRx: (data.system?.network_rx_bytes || 0) / 1024 / 1024, // MB
-          networkTx: (data.system?.network_tx_bytes || 0) / 1024 / 1024, // MB
+          cpuUsage: data.cpu_percent || 0,
+          memoryUsage: data.memory_used_percent || 0,
+          diskUsage: data.disk_used_percent || 0,
+          networkRx: (data.network_rx_bytes || 0) / 1024 / 1024, // MB
+          networkTx: (data.network_tx_bytes || 0) / 1024 / 1024, // MB
           processCount: data.processes?.length || 0
         };
 

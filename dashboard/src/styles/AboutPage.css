@@ -1,0 +1,22 @@
+/**
+ * AboutPage Styles
+ * Main container for project showcase
+ */
+
+.about-page {
+  min-height: 100vh;
+  background: var(--offwhite-main);
+  overflow-y: auto;
+}
+
+.about-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 48px 32px;
+}
+
+@media (max-width: 768px) {
+  .about-container {
+    padding: 32px 16px;
+  }
+}

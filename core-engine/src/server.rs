@@ -268,6 +268,21 @@ struct SystemSnapshot {
     network_tx_bytes: u64,
     processes: Vec<ProcessInfo>,
     timestamp: i64,
+    // NEW: Additional metrics for comprehensive monitoring
+    load_1min: f64,
+    load_5min: f64,
+    load_15min: f64,
+    swap_total_bytes: u64,
+    swap_used_bytes: u64,
+    swap_used_percent: f64,
+    cpu_cores: Vec<f64>,
+    disk_read_bytes: u64,
+    disk_write_bytes: u64,
+    uptime_seconds: u64,
+    context_switches: u64,
+    process_running: usize,
+    process_sleeping: usize,
+    process_zombie: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -384,6 +399,15 @@ async fn get_linux_snapshot(state: &AppState) -> Result<Json<SystemSnapshot>, Ap
     // Get top processes
     let processes = get_top_processes(10);
 
+    // NEW: Get additional comprehensive monitoring metrics
+    let (load_1min, load_5min, load_15min) = get_system_load();
+    let (swap_total_bytes, swap_used_bytes, swap_used_percent) = get_swap_usage();
+    let cpu_cores = get_cpu_per_core();
+    let (disk_read_bytes, disk_write_bytes) = get_disk_io();
+    let uptime_seconds = get_uptime();
+    let context_switches = get_context_switches();
+    let (process_running, process_sleeping, process_zombie) = get_process_states();
+
     Ok(Json(SystemSnapshot {
         cpu_percent,
         memory_total_bytes: total_bytes,
@@ -397,12 +421,27 @@ async fn get_linux_snapshot(state: &AppState) -> Result<Json<SystemSnapshot>, Ap
         network_tx_bytes,
         processes,
         timestamp: chrono::Utc::now().timestamp(),
+        // NEW: Additional metrics
+        load_1min,
+        load_5min,
+        load_15min,
+        swap_total_bytes,
+        swap_used_bytes,
+        swap_used_percent,
+        cpu_cores,
+        disk_read_bytes,
+        disk_write_bytes,
+        uptime_seconds,
+        context_switches,
+        process_running,
+        process_sleeping,
+        process_zombie,
     }))
 }
 
 /// Get Windows system snapshot
 async fn get_windows_snapshot(_state: &AppState) -> Result<Json<SystemSnapshot>, ApiError> {
-    use crate::windows_telemetry::WindowsTelemetryService;
+    use intellishell_core::windows_telemetry::WindowsTelemetryService;
     
     // Get CPU usage
     let cpu_percent = WindowsTelemetryService::get_cpu_usage()
@@ -460,6 +499,21 @@ async fn get_windows_snapshot(_state: &AppState) -> Result<Json<SystemSnapshot>,
         network_tx_bytes,
         processes,
         timestamp: chrono::Utc::now().timestamp(),
+        // NEW: Additional metrics (Windows - defaults/approximations)
+        load_1min: 0.0, // Windows doesn't have load average
+        load_5min: 0.0,
+        load_15min: 0.0,
+        swap_total_bytes: 0, // TODO: Can get from Win32_PageFileUsage
+        swap_used_bytes: 0,
+        swap_used_percent: 0.0,
+        cpu_cores: Vec::new(), // TODO: Can get per-core from performance counters
+        disk_read_bytes: 0, // TODO: Can get from Win32_PerfFormattedData_PerfDisk_LogicalDisk
+        disk_write_bytes: 0,
+        uptime_seconds: 0, // TODO: Can calculate from LastBootUpTime
+        context_switches: 0, // TODO: Can get from performance counters
+        process_running: 0, // TODO: Can aggregate from Get-Process
+        process_sleeping: 0,
+        process_zombie: 0,
     }))
 }
 
@@ -576,7 +630,7 @@ async fn execute_windows_pipeline(
     state: &AppState,
     history_id: i64,
 ) -> Result<Json<ExecuteResponse>, ApiError> {
-    use crate::windows_executor::WindowsExecutionService;
+    use intellishell_core::windows_executor::WindowsExecutionService;
     
     let risk_level = req.risk_level.to_lowercase();
     
@@ -759,7 +813,7 @@ async fn execute_sandboxed(command: &str, _timeout_seconds: u64, db: &Database, 
 
 /// Execute Windows command directly (for LOW risk only)
 async fn execute_windows_direct(command: &str, timeout_seconds: u64, db: &Database, history_id: i64) -> Result<Json<ExecuteResponse>, ApiError> {
-    use crate::windows_executor::WindowsExecutionService;
+    use intellishell_core::windows_executor::WindowsExecutionService;
     
     let result = WindowsExecutionService::execute_direct(command, timeout_seconds)
         .await
@@ -793,7 +847,7 @@ async fn execute_windows_direct(command: &str, timeout_seconds: u64, db: &Databa
 
 /// Execute Windows command with job control (for MEDIUM risk)
 async fn execute_windows_sandboxed(command: &str, timeout_seconds: u64, db: &Database, history_id: i64) -> Result<Json<ExecuteResponse>, ApiError> {
-    use crate::windows_executor::WindowsExecutionService;
+    use intellishell_core::windows_executor::WindowsExecutionService;
     
     let result = WindowsExecutionService::execute_sandboxed(command, timeout_seconds)
         .await
@@ -1075,6 +1129,186 @@ fn read_process_info(pid: u32) -> Option<ProcessInfo> {
         memory_kb,
         cpu_percent: 0.0, // Simplified - would need delta calculation
     })
+}
+
+// ============================================================================
+// NEW: Additional Telemetry Functions for Comprehensive Monitoring
+// ============================================================================
+
+/// Get system load averages from /proc/loadavg
+fn get_system_load() -> (f64, f64, f64) {
+    let contents = match std::fs::read_to_string("/proc/loadavg") {
+        Ok(c) => c,
+        Err(_) => return (0.0, 0.0, 0.0),
+    };
+
+    let parts: Vec<&str> = contents.split_whitespace().collect();
+    if parts.len() < 3 {
+        return (0.0, 0.0, 0.0);
+    }
+
+    let load_1min = parts[0].parse::<f64>().unwrap_or(0.0);
+    let load_5min = parts[1].parse::<f64>().unwrap_or(0.0);
+    let load_15min = parts[2].parse::<f64>().unwrap_or(0.0);
+
+    (load_1min, load_5min, load_15min)
+}
+
+/// Get swap usage from /proc/meminfo
+fn get_swap_usage() -> (u64, u64, f64) {
+    let contents = match std::fs::read_to_string("/proc/meminfo") {
+        Ok(c) => c,
+        Err(_) => return (0, 0, 0.0),
+    };
+
+    let swap_total_kb = parse_meminfo_value(&contents, "SwapTotal:").unwrap_or(0);
+    let swap_free_kb = parse_meminfo_value(&contents, "SwapFree:").unwrap_or(0);
+
+    let swap_total_bytes = swap_total_kb * 1024;
+    let swap_free_bytes = swap_free_kb * 1024;
+    let swap_used_bytes = swap_total_bytes.saturating_sub(swap_free_bytes);
+
+    let swap_used_percent = if swap_total_bytes > 0 {
+        (swap_used_bytes as f64 / swap_total_bytes as f64) * 100.0
+    } else {
+        0.0
+    };
+
+    (swap_total_bytes, swap_used_bytes, swap_used_percent)
+}
+
+/// Get per-core CPU usage from /proc/stat
+fn get_cpu_per_core() -> Vec<f64> {
+    let contents = match std::fs::read_to_string("/proc/stat") {
+        Ok(c) => c,
+        Err(_) => return Vec::new(),
+    };
+
+    let mut core_percentages = Vec::new();
+
+    for line in contents.lines() {
+        if line.starts_with("cpu") && !line.starts_with("cpu ") {
+            let fields: Vec<u64> = line
+                .split_whitespace()
+                .skip(1)
+                .filter_map(|f| f.parse::<u64>().ok())
+                .collect();
+
+            if fields.len() >= 4 {
+                let idle = fields[3];
+                let total: u64 = fields.iter().sum();
+                let usage_percent = if total > 0 {
+                    100.0 * (1.0 - (idle as f64 / total as f64))
+                } else {
+                    0.0
+                };
+                core_percentages.push(usage_percent);
+            }
+        }
+    }
+
+    core_percentages
+}
+
+/// Get disk I/O stats from /proc/diskstats
+fn get_disk_io() -> (u64, u64) {
+    let contents = match std::fs::read_to_string("/proc/diskstats") {
+        Ok(c) => c,
+        Err(_) => return (0, 0),
+    };
+
+    let mut total_read_bytes = 0u64;
+    let mut total_write_bytes = 0u64;
+
+    for line in contents.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() < 11 {
+            continue;
+        }
+
+        // Skip loop devices and partitions (only count whole disks like sda, nvme0n1)
+        let device_name = parts[2];
+        if device_name.starts_with("loop") || device_name.ends_with(|c: char| c.is_ascii_digit()) {
+            continue;
+        }
+
+        // Sectors read (field 5) and sectors written (field 9)
+        // Each sector is typically 512 bytes
+        if let Ok(sectors_read) = parts[5].parse::<u64>() {
+            total_read_bytes += sectors_read * 512;
+        }
+        if let Ok(sectors_written) = parts[9].parse::<u64>() {
+            total_write_bytes += sectors_written * 512;
+        }
+    }
+
+    (total_read_bytes, total_write_bytes)
+}
+
+/// Get system uptime from /proc/uptime
+fn get_uptime() -> u64 {
+    let contents = match std::fs::read_to_string("/proc/uptime") {
+        Ok(c) => c,
+        Err(_) => return 0,
+    };
+
+    let parts: Vec<&str> = contents.split_whitespace().collect();
+    if parts.is_empty() {
+        return 0;
+    }
+
+    parts[0].parse::<f64>().unwrap_or(0.0) as u64
+}
+
+/// Get context switches from /proc/stat
+fn get_context_switches() -> u64 {
+    let contents = match std::fs::read_to_string("/proc/stat") {
+        Ok(c) => c,
+        Err(_) => return 0,
+    };
+
+    for line in contents.lines() {
+        if line.starts_with("ctxt ") {
+            if let Some(value_str) = line.split_whitespace().nth(1) {
+                return value_str.parse::<u64>().unwrap_or(0);
+            }
+        }
+    }
+
+    0
+}
+
+/// Get process state distribution (running, sleeping, zombie)
+fn get_process_states() -> (usize, usize, usize) {
+    let mut running = 0;
+    let mut sleeping = 0;
+    let mut zombie = 0;
+
+    if let Ok(entries) = std::fs::read_dir("/proc") {
+        for entry in entries.flatten() {
+            if let Ok(pid_str) = entry.file_name().into_string() {
+                if pid_str.parse::<u32>().is_ok() {
+                    let status_path = format!("/proc/{}/status", pid_str);
+                    if let Ok(contents) = std::fs::read_to_string(&status_path) {
+                        for line in contents.lines() {
+                            if line.starts_with("State:") {
+                                let state = line.split_whitespace().nth(1).unwrap_or("");
+                                match state {
+                                    "R" => running += 1,
+                                    "S" | "D" | "I" => sleeping += 1,
+                                    "Z" => zombie += 1,
+                                    _ => sleeping += 1,
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    (running, sleeping, zombie)
 }
 
 // ============================================================================

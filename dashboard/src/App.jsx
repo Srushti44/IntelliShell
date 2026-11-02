@@ -13,6 +13,7 @@ import { ProcessesPage } from './pages/ProcessesPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { MonitoringPage } from './pages/MonitoringPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { AboutPage } from './pages/AboutPage';
 import './App.css';
 import './styles/colors.css';
 import './styles/typography.css';
@@ -51,6 +52,7 @@ function App() {
             <Route path="/processes" element={<ProcessesPage />} />
             <Route path="/monitoring" element={<MonitoringPage />} />
             <Route path="/history" element={<HistoryPage />} />
+            <Route path="/about" element={<AboutPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </Layout>

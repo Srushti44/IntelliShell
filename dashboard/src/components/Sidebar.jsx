@@ -13,7 +13,8 @@ import {
   Brain, 
   Settings,
   ChevronLeft,
-  ChevronRight 
+  ChevronRight,
+  Info
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -23,6 +24,7 @@ const navigation = [
   { name: 'Process Manager', href: '/processes', icon: Cpu },
   { name: 'Monitoring', href: '/monitoring', icon: Activity },
   { name: 'Command History', href: '/history', icon: History },
+  { name: 'About & OS Concepts', href: '/about', icon: Info },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

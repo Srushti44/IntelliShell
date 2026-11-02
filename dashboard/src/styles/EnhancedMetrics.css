@@ -1,0 +1,143 @@
+/* Enhanced System Metrics Styles */
+
+.enhanced-metrics-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px;
+  background: var(--color-background, #FAFAF5);
+}
+
+.enhanced-metrics-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--color-text-secondary, #978F66);
+  gap: 12px;
+}
+
+.metric-section {
+  background: var(--color-surface, #FFFFFF);
+  border: 1px solid var(--color-border, #E4D6A9);
+  border-radius: 4px;
+  padding: 20px;
+}
+
+.metric-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-family: var(--font-heading, 'Bodoni Moda', serif);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink-dark, #1A1A1A);
+}
+
+.metric-header svg {
+  color: var(--color-brown-deep, #622B14);
+}
+
+.metric-cards-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.metric-card-small {
+  padding: 16px;
+  background: var(--color-bg-subtle, #FAFAF5);
+  border: 1px solid var(--color-border, #E4D6A9);
+  border-radius: 2px;
+  text-align: center;
+}
+
+.metric-label {
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-size: 11px;
+  color: var(--color-text-secondary, #978F66);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.metric-value {
+  font-family: var(--font-heading, 'Bodoni Moda', serif);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--ink-dark, #1A1A1A);
+}
+
+.metric-row-two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.metric-summary {
+  text-align: center;
+  margin-top: 12px;
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-size: 13px;
+  color: var(--color-text-secondary, #978F66);
+}
+
+.metric-unavailable {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--color-text-muted, #C4BDA3);
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.metric-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.metric-card-stat {
+  padding: 12px;
+  background: var(--color-bg-subtle, #FAFAF5);
+  border: 1px solid var(--color-border, #E4D6A9);
+  border-radius: 2px;
+}
+
+.metric-card-stat .metric-label {
+  font-size: 10px;
+  margin-bottom: 6px;
+  justify-content: flex-start;
+}
+
+.metric-card-stat .metric-value {
+  font-size: 18px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .metric-row-two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-value {
+    font-size: 20px;
+  }
+
+  .metric-card-stat .metric-value {
+    font-size: 16px;
+  }
+}

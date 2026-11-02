@@ -1,21 +1,25 @@
 import React from 'react';
 import { useSystemSnapshot } from '../hooks/useSystemSnapshot';
 import { SystemCharts } from '../components/SystemCharts';
+import { EnhancedSystemMetrics } from '../components/EnhancedSystemMetrics';
 import { PageSection } from '../components/PageSection';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorAlert } from '../components/ErrorAlert';
+import '../styles/EnhancedMetrics.css';
 
 /**
- * MonitoringPage - Detailed system monitoring with real-time charts
- * Shows telemetry visualization without any mock data
+ * MonitoringPage - Comprehensive system monitoring with 7+ real-time metrics
+ * FIXED: Now synchronized with System Overview data source
+ * Shows live telemetry visualization with NO mock data
  */
 export function MonitoringPage() {
-  const { snapshot, isLoading, error } = useSystemSnapshot();
+  // FIXED: Using consistent data structure with SystemOverview
+  const { data: snapshot, isLoading, error, refetch } = useSystemSnapshot();
 
   if (isLoading) {
     return (
       <div className="page-content">
-        <LoadingSpinner message="Loading monitoring data..." />
+        <LoadingSpinner message="Loading comprehensive monitoring data..." />
       </div>
     );
   }
@@ -26,6 +30,7 @@ export function MonitoringPage() {
         <ErrorAlert 
           title="Failed to load monitoring data" 
           message={error.message}
+          onRetry={refetch}
         />
       </div>
     );
@@ -35,14 +40,22 @@ export function MonitoringPage() {
     <div className="page-content">
       <PageSection
         title="Real-Time Telemetry"
-        description="Live resource metrics updated every 5 seconds. Charts display rolling window of recent snapshots."
+        description="Live resource metrics updated every 2 seconds. Charts display rolling window of recent snapshots."
       >
         <SystemCharts currentSnapshot={snapshot} />
       </PageSection>
 
       <PageSection
-        title="Current Resource Usage"
-        description="Latest snapshot values"
+        title="Comprehensive System Metrics (7+ Linux Metrics)"
+        description="System Load, Swap Usage, CPU Per-Core, Disk I/O, Process States, Uptime, and Context Switches"
+        style={{ marginTop: '32px' }}
+      >
+        <EnhancedSystemMetrics snapshot={snapshot} />
+      </PageSection>
+
+      <PageSection
+        title="Current Resource Snapshot"
+        description="Latest instantaneous values from Linux /proc filesystem"
         style={{ marginTop: '32px' }}
       >
         <div style={{
@@ -56,17 +69,19 @@ export function MonitoringPage() {
         }}>
           <MetricCard 
             label="CPU Usage" 
-            value={`${snapshot?.system?.cpu_usage?.toFixed(1) || '0.0'}%`}
+            value={`${snapshot?.cpu_percent?.toFixed(1) || '0.0'}%`}
             color="var(--color-brown-deep)"
           />
           <MetricCard 
             label="Memory Used" 
-            value={`${snapshot?.system?.memory_used_percent?.toFixed(1) || '0.0'}%`}
+            value={`${snapshot?.memory_used_percent?.toFixed(1) || '0.0'}%`}
+            subtitle={`${formatBytes(snapshot?.memory_used_bytes || 0)} / ${formatBytes(snapshot?.memory_total_bytes || 0)}`}
             color="var(--color-terracotta)"
           />
           <MetricCard 
             label="Disk Used" 
-            value={`${snapshot?.system?.disk_used_percent?.toFixed(1) || '0.0'}%`}
+            value={`${snapshot?.disk_used_percent?.toFixed(1) || '0.0'}%`}
+            subtitle={`${formatBytes(snapshot?.disk_used_bytes || 0)} / ${formatBytes(snapshot?.disk_total_bytes || 0)}`}
             color="var(--color-olive-muted)"
           />
           <MetricCard 
@@ -76,13 +91,24 @@ export function MonitoringPage() {
           />
           <MetricCard 
             label="Network RX" 
-            value={`${((snapshot?.system?.network_rx_bytes || 0) / 1024 / 1024).toFixed(2)} MB`}
+            value={formatBytes(snapshot?.network_rx_bytes || 0)}
             color="var(--color-terracotta)"
           />
           <MetricCard 
             label="Network TX" 
-            value={`${((snapshot?.system?.network_tx_bytes || 0) / 1024 / 1024).toFixed(2)} MB`}
+            value={formatBytes(snapshot?.network_tx_bytes || 0)}
             color="var(--color-olive-muted)"
+          />
+          <MetricCard 
+            label="System Load (1m)" 
+            value={snapshot?.load_1min?.toFixed(2) || '0.00'}
+            color="var(--color-brown-deep)"
+          />
+          <MetricCard 
+            label="Swap Used" 
+            value={`${snapshot?.swap_used_percent?.toFixed(1) || '0.0'}%`}
+            subtitle={snapshot?.swap_total_bytes > 0 ? formatBytes(snapshot?.swap_used_bytes || 0) : 'No swap'}
+            color="var(--color-terracotta)"
           />
         </div>
       </PageSection>
@@ -90,7 +116,15 @@ export function MonitoringPage() {
   );
 }
 
-function MetricCard({ label, value, color }) {
+function formatBytes(bytes) {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+}
+
+function MetricCard({ label, value, subtitle, color }) {
   return (
     <div style={{
       padding: '16px',
@@ -116,9 +150,18 @@ function MetricCard({ label, value, color }) {
       }}>
         {value}
       </div>
+      {subtitle && (
+        <div style={{
+          fontFamily: 'var(--font-body)',
+          fontSize: '11px',
+          color: 'var(--color-text-muted)',
+          marginTop: '4px'
+        }}>
+          {subtitle}
+        </div>
+      )}
     </div>
   );
 }
-
 
 export default MonitoringPage;
