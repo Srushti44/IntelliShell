@@ -170,7 +170,7 @@ COMMAND GENERATION GUIDELINES:
 
 SAFETY PRINCIPLES:
 - Never generate commands that:
-  * Delete system directories (C:\Windows, C:\Program Files, etc.)
+  * Delete system directories (C:\\Windows, C:\\Program Files, etc.)
   * Modify critical system files without explicit request
   * Format volumes or clear disks
   * Shutdown/reboot without explicit request
@@ -184,7 +184,7 @@ POWERSHELL CONVENTIONS:
 - Use proper parameter names with - prefix
 - Use pipeline | for chaining commands
 - Use single quotes for literal strings, double quotes for variable expansion
-- Path separators are backslashes \ (or forward slashes / also work)
+- Path separators are backslashes \\ (or forward slashes / also work)
 
 EXAMPLES:
 Request: "show me the largest files in my documents"
